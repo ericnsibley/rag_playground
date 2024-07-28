@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pgvector_db
+      POSTGRES_USER: pgvector_user
+      POSTGRES_PASSWORD: pgvector_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgvector_data:/var/lib/postgresql/data
+
+  # rag:
+  #   build:
+  #     context: ./streamlit_app
+  #     dockerfile: Dockerfile
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - postgres
+  #   environment:
+  #     PGVECTOR_HOST: postgres
+  #     PGVECTOR_PORT: 5432
+  #     PGVECTOR_DB: pgvector_db
+  #     PGVECTOR_USER: pgvector_user
+  #     PGVECTOR_PASSWORD: pgvector_password
+  #   ports:
+  #     - "8501:8501"
+
+volumes:
+  pgvector_data:
