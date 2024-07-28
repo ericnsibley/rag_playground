@@ -93,7 +93,7 @@ VALUES (%s, %s, %s, %s, %s)"""
 def store_query(conn, query: Interaction, conversation: str): 
     with conn.cursor() as cur:
         sql = """
-INSERT INTO Conversations ("content", content_vector, token_count, conversation, result)
+INSERT INTO Conversations (content, content_vector, token_count, conversation, result)
 VALUES (%s, %s, %s, %s, %s)"""
         cur.execute(sql, (str(query), query.get_embedding(), query.get_tokens(), conversation, True))
         conn.commit()
@@ -142,7 +142,6 @@ WHERE conversation=%s
         rows = cur.fetchall()
     interactions = []
     for row in rows: 
-        print(f"row: {row}")
         data = {
             "human": row[0].split('\nBot: ')[0].replace('Human: ', ''),
             "bot": row[0].split('\nBot: ')[1],
@@ -158,4 +157,17 @@ WHERE conversation=%s
         ret = interactions[0]
     else:
         logging.info(f"New conversation.")
+    return ret 
+
+
+def memoize(old: list[Interaction], new: list[Interaction]) -> list[Interaction]:
+    ret = []
+    o_len = len(old)
+    n_len = len(new)
+    for i in range(n_len):
+        if i < o_len:
+            if old[i].human == new[i].human and old[i].bot == new[i].bot:
+                ret.append( old[i] )
+        else:
+            ret.append( new[i] )
     return ret 

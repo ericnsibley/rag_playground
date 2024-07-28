@@ -41,6 +41,8 @@ for i in range(num_messages):
         bot_msg = st.text_area(f"Response {i+1}", bot)
     interactions.append(util.Interaction(human=user_msg, bot=bot_msg))
 
+interactions = util.memoize(old_interactions, interactions)
+
 old_query = util.fetch_query(conn, conversation=conversation)
 if old_query:
     q = old_query.human
@@ -55,6 +57,7 @@ if st.button("Store Interactions"):
     else:
         util.wipe_table(conn)
         util.store_interactions(conn=conn, interactions=interactions, conversation=conversation)
+        # search db 
         util.store_query(conn=conn, query=query_interaction, conversation=conversation)
 
 if st.button("Wipe Table"):
