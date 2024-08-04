@@ -3,6 +3,7 @@ import psycopg2
 import os
 import tiktoken
 import streamlit as st
+from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
@@ -71,9 +72,15 @@ Bot: {self.bot}"""
         self.tokens = tokens 
         return tokens
     
-    def get_embedding(self) -> list[float]: # TODO: skipped for now for cost
+    def get_embedding(self) -> list[float]: 
         if self.embedding:
-            return self.embedding
+            return self.embedding 
+        if self.result:
+            text = self.human
+        else:
+            text = str(self)
+        print(f"text: {text}")
+        client = OpenAI(api_key=st.session_state['openai_api_key'])
         embedding = [ i/10 for i in range(1536) ]
         self.embedding = embedding 
         return embedding 
@@ -292,25 +299,27 @@ FROM Filtered_similar_messages;""", (st.session_state.convo, recent_message_limi
     return interactions 
 
 
-def log(interactions: list[Interaction]):
-    for i, j in enumerate(interactions):
-        logger.info(f"Interaction: {i} content length: {len(str(j))}")
-        logger.info(f"Tokens: {j.get_tokens()}")
-    print()
+def get_completion(interactions: list[Interaction], query: str, max_tokens: int = 500, model: str = 'gpt-3.5-turbo'):
+    client = OpenAI(api_key=st.session_state['openai_api_key'])
+    p = ""
+    for i in interactions:
+        p += str(i) + '\n\n'
 
+    prompt = f"""I need help rephrasing a query. I will send you parts of a conversation along with a query, and you will rephrase the query into context. 
 
-def store_and_search_interactions():
-    wipe_table()
-    store_interactions()
+Previous interactions:
+{p}
 
-    if st.session_state['query'].human.strip() != "":
-        interactions = search_by_recent()
-        log(interactions)
-        logger.info(f"recent")
-        interactions = search_by_similarity(st.session_state['query'].get_embedding())
-        logger.info(f"similarity")
-        log(interactions)
-        interactions = search_by_recent_and_similarity(st.session_state['query'].get_embedding())
-        logger.info(f"recent_and_similarity")
-        log(interactions)
-        store_query()
+Query:
+{query}
+
+Please take into account the context from the previous chats when rephrasing the query."""
+    
+    res = client.chat.completions.create(
+        model=model,
+        messages=[
+            { "role": "user", "content": prompt }
+        ],
+        max_tokens=max_tokens
+    )
+    return res.choices[0].message.content

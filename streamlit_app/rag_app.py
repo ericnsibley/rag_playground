@@ -3,6 +3,7 @@ import os
 import util
 import logging
 from dotenv import load_dotenv
+import json
 
 load_dotenv() 
 
@@ -15,7 +16,11 @@ logger.info("Rerunning page...")
 util.get_db_connection()
 
 conversations = util.get_conversations() 
-current_conversation = st.sidebar.selectbox("Select a conversation", conversations)
+
+with st.sidebar:
+    current_conversation = st.selectbox("Select a conversation", conversations)
+
+    openai_api_key = st.text_input("OpenAI API Key", key="openai_api_key", type="password")
 
 st.title("Conversation history testbench")
 
@@ -45,24 +50,59 @@ for i in range(num_messages):
     if interaction.human != "" and interaction.bot != "":
         interactions.append( interaction )
 
+# reduce embedding costs by reusing them
 st.session_state['interactions'] = util.memoize(st.session_state['old_interactions'], interactions)
-st.write(len(st.session_state['interactions']))
+
 if 'old_query' not in st.session_state:
     st.session_state['old_query'] = util.fetch_query()
+
 if st.session_state['old_query'] is None:
     q = ""
+    b = ""
 else:
     q = st.session_state['old_query'].human
+    b = st.session_state['old_query'].bot
     
 query = st.text_area(f"Query", q)
-st.session_state['query'] = util.Interaction(human=query, bot="") # TODO
+st.session_state['query'] = util.Interaction(human=query, bot=b)
 
 
-if st.button("Store Interactions", on_click=util.store_and_search_interactions):
-    if query.strip() == "":
-        st.warning("Query can't be empty!") # This does nothing to a callback
+if st.button("Save and regenerate"):
+    if st.session_state['query'] == "":
+        st.warning("Query can't be empty.")
+        st.stop()
+
+    if st.session_state['openai_api_key'] == "":
+        st.warning("Please add your OpenAI API key to continue.")
+        st.stop()
+
+    util.wipe_table()
+    util.store_interactions()
+
+    if st.session_state['query'].human != "": #TODO: consider asyncio-ing these
+        di = {}
+        interactions = util.search_by_recent()
+        di['recency'] = util.get_completion(interactions, st.session_state['query'].human)
+        interactions = util.search_by_similarity(st.session_state['query'].get_embedding())
+        di['similarity'] = util.get_completion(interactions, st.session_state['query'].human)
+        interactions = util.search_by_recent_and_similarity(st.session_state['query'].get_embedding())
+        di['blended'] = util.get_completion(interactions, st.session_state['query'].human)
+        st.session_state['query'].bot = json.dumps(di)
+        print(di)
+        util.store_query()
 
 
-if st.button("Wipe Table"):
+if st.session_state['query'].bot != "":
+    searches = json.loads(st.session_state['query'].bot)
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.markdown(f"<div style='background-color: #F08080; padding: 10px; border-radius: 10px;'>Recency:<br>{searches.get('recency', '')}</div>", unsafe_allow_html=True)
+    with col2:
+        st.markdown(f"<div style='background-color: #6CA6CD; padding: 10px; border-radius: 10px;'>Similarity:<br>{searches.get('similarity', '')}</div>", unsafe_allow_html=True)
+    with col3:
+        st.markdown(f"<div style='background-color: #7ACB7A; padding: 10px; border-radius: 10px;'>Blended:<br>{searches.get('blended', '')}</div>", unsafe_allow_html=True)
+
+
+if st.button("Wipe DB"):
     util.wipe_db()
     util.init_db()
