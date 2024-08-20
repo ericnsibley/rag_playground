@@ -3,11 +3,12 @@ This will serve as a portable and reproduceable experiment for evaluating implem
 
 Because we are narrowing the scope to a small part of the architecture, this project is a little unorthodox. Instead of a comfortable back-and-forth in an ordinary chat app, the user sets up a conversation all the way up to a final generation, and then we get a generation for each conversation-retrieval strategy for comparison.  
 
-This idea was inspired by a team from Google implementing RAG for work. They built a conversation history store out of Firestore that operates solely on context stuffing the most recent message until a token limit is met. I took a look at [how langchain implements it](https://python.langchain.com/v0.1/docs/use_cases/question_answering/chat_history/) and saw that they make use of another vector store. 
+This idea was inspired by a FAANG contractor whom I supervised implementing RAG. They built a conversation history store out of a NoSQL store that operates solely on context stuffing the most recent message until a token limit is met. I took a look at [how langchain implements it](https://python.langchain.com/v0.1/docs/use_cases/question_answering/chat_history/) and saw that they make use of another vector store. 
 
 This made two things click for me 
 - if the cornerstone of RAG architectures is a vector database, then I always have at least one in a RAG system
 - I use the vector DB to similarity search for answers and I want to start performing similarity search on conversation history. I should probably be using a similar backend flow to implement similar functionality
+
 
 ## Why do we care?
 As a social species accustomed to a conversational back-and-forth, it's very disorienting when you're speaking to one of these systems and you want the current responses to reflect corrections you've already made, or you make reference to a previous statement, or you just don't want to repeat yourself. This project allow us to compare multiple strategies of retrieving conversation history and see which generates good output the most consistently. 
@@ -31,7 +32,7 @@ I really like making use of metadata to pre-filter the results before similarity
     - ada 2 has limit of 8191 token input, make sure interactions respect that limit and fail gracefully 
 - deployment
 - env vars in deployment
-- thrash db, save stuff that matches your api key from env vars
+- thrash db
 - maybe asyncio to parallelize the searches? 
 
 

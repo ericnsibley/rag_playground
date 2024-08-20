@@ -192,7 +192,7 @@ WITH Similar_messages AS (
     SELECT 
         content,
         token_count,
-        SUM(token_count) OVER (ORDER BY content_vector <=> %s::vector ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cumulative_tokens 
+        SUM(token_count) OVER (ORDER BY 1 - (content_vector <=> %s::vector) ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cumulative_tokens 
     FROM Conversations
     WHERE conversation = %s
         AND result = False
@@ -267,7 +267,7 @@ Similar_messages AS (
     SELECT 
         content,
         token_count,
-        SUM(token_count) OVER (ORDER BY content_vector <=> %s::vector ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cumulative_tokens
+        SUM(token_count) OVER (ORDER BY 1 - (content_vector <=> %s::vector) ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cumulative_tokens
     FROM Conversations
     WHERE conversation = %s
         AND result = False
